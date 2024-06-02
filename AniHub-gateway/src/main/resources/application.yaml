@@ -1,0 +1,10 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: gateway
+  cloud:
+    nacos:
+      server-addr: 101.42.35.103:8848
+    gateway:
+      routes: # 路由规则

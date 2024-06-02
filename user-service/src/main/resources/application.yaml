@@ -1,0 +1,8 @@
+server:
+  port: 8081
+ani:
+  swagger:
+    title: 用户服务接口文档
+    package: com.anihub.user.controller
+  db:
+    database: ani-user
