@@ -6,3 +6,14 @@ ani:
     package: com.anihub.user.controller
   db:
     database: ani-user
+  jwt:
+    location: classpath:anihub.jks
+    alias: anihub
+    password: bianxin123
+    tokenTTL: 30m
+  auth:
+    excludePaths:
+      - /search/**
+      - /users/login
+      - /items/**
+      - /hi

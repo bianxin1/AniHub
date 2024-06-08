@@ -9,7 +9,7 @@ import java.util.Date;
 @Data
 public class User {
     //主键，自动递增
-    private Integer id;
+    private Long id;
     //用户名
     private String username;
     //邮箱

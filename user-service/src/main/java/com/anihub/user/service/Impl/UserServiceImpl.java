@@ -1,11 +1,14 @@
 package com.anihub.user.service.Impl;
 
+
 import cn.hutool.core.bean.BeanUtil;
 import com.anihub.model.user.dtos.LoginDto;
 import com.anihub.model.user.pojos.User;
 import com.anihub.model.user.vo.LoginVo;
+import com.anihub.user.config.JwtProperties;
 import com.anihub.user.mapper.UserMapper;
 import com.anihub.user.service.IUserService;
+import com.anihub.user.utils.JwtTool;
 import com.anihub.utils.common.AppJwtUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -19,6 +22,11 @@ import org.springframework.util.DigestUtils;
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
     final private UserMapper userMapper;
+
+
+    private final JwtTool jwtTool;
+
+    private final JwtProperties jwtProperties;
 
     /**
      * 注册
@@ -68,7 +76,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             throw new RuntimeException("密码错误");
         }
         // 3.生成jwt令牌
-        String token = AppJwtUtil.getToken(user.getId().longValue());
+        String token = jwtTool.createToken(user.getId(), jwtProperties.getTokenTTL());
         // 4.返回结果
         LoginVo loginVo = new LoginVo();
         loginVo.setToken(token);
