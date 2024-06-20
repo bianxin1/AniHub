@@ -2,6 +2,7 @@ package com.anihub.user.controller;
 
 import com.anihub.model.common.dtos.Result;
 import com.anihub.model.user.dtos.LoginDto;
+import com.anihub.model.user.pojos.User;
 import com.anihub.model.user.vo.LoginVo;
 import com.anihub.user.service.IUserService;
 import io.swagger.annotations.Api;
@@ -34,4 +35,10 @@ public class UserController {
     public String test() {
         return "test";
     }
+    @ApiOperation("查询用户信息")
+    @GetMapping("/select")
+    public User select(@RequestParam("id") Long id) {
+        return userService.getById(id);
+    }
+
 }

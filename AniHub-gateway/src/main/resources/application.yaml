@@ -12,5 +12,6 @@ ani:
       - /search/**
       - /users/login
       - /users/test
+      - /users/register
       - /items/**
       - /hi

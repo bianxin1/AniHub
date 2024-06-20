@@ -14,6 +14,9 @@
         <module>AniHub-utils</module>
         <module>AniHub-model</module>
         <module>user-service</module>
+        <module>layout-service</module>
+        <module>post-service</module>
+        <module>comment-service</module>
     </modules>
     <version>1.0-SNAPSHOT</version>
     <!--
@@ -118,7 +121,14 @@
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
             </dependency>
+            <!--pagehelper-->
+            <dependency>
+                <groupId>com.github.pagehelper</groupId>
+                <artifactId>pagehelper-spring-boot-starter</artifactId>
+                <version>1.3.0</version>
+            </dependency>
         </dependencies>
+
     </dependencyManagement>
     <dependencies>
         <!-- lombok 管理 -->

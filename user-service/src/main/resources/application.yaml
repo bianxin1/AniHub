@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8082
 ani:
   swagger:
     title: 用户服务接口文档
@@ -10,10 +10,11 @@ ani:
     location: classpath:anihub.jks
     alias: anihub
     password: bianxin123
-    tokenTTL: 30m
+    tokenTTL: 240m
   auth:
     excludePaths:
       - /search/**
       - /users/login
+      - /users/test
       - /items/**
       - /hi
