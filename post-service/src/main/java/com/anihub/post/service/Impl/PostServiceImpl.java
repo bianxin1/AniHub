@@ -70,13 +70,16 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
             boolean redisSuccess = false;
             try {
                 stringRedisTemplate.opsForZSet().add("post:time:" + post.getLayoutId(), post.getId().toString(), System.currentTimeMillis());
+                stringRedisTemplate.opsForValue().set("post:comment:" + post.getId(), "0");
                 redisSuccess = true;
 
                 PostRedisDto postRedisDto = new PostRedisDto();
                 BeanUtils.copyProperties(post, postRedisDto);
-                // TODO 填充其他数据，lastUserId，lastUsername，commentAt
+                postRedisDto.setLastUserId(post.getUserId());
                 User userInfo = userClient.select(post.getUserId());
                 postRedisDto.setUsername(userInfo.getUsername());
+                postRedisDto.setLastUsername(userInfo.getUsername());
+                postRedisDto.setCommentAt(post.getCreatedAt());
                 List<Tag> tagNames = layoutClient.selectByids(tags);
                 List<String> tagNamesList = tagNames.stream().map(Tag::getName).toList();
                 postRedisDto.setTagName(tagNamesList);

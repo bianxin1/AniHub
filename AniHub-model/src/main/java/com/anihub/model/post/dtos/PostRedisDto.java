@@ -11,8 +11,8 @@ public class PostRedisDto {
     private Long id;
     private Long userId;
     private String username;
-    private String lastCommentUserId;
-    private String lastCommentUsername;
+    private Long lastUserId;
+    private String lastUsername;
     private String title;
     private Long commentCount;
     private Date createdAt;
