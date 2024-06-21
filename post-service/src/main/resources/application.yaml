@@ -1,8 +1,0 @@
-server:
-  port: 8083
-ani:
-  swagger:
-    title: 帖子服务接口文档
-    package: com.anihub.post.controller
-  db:
-    database: ani-post

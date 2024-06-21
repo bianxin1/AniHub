@@ -1,8 +1,0 @@
-server:
-  port: 8081
-ani:
-  swagger:
-    title: 版面服务接口文档
-    package: com.anihub.layout.controller
-  db:
-    database: ani-layout
