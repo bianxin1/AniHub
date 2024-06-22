@@ -2,6 +2,7 @@ package com.anihub.post.controller;
 
 import com.anihub.model.common.dtos.PageResult;
 import com.anihub.model.common.dtos.Result;
+import com.anihub.model.common.dtos.ScrollResult;
 import com.anihub.model.post.dtos.PostDto;
 import com.anihub.model.post.dtos.PostQueryDto;
 import com.anihub.post.service.IPostService;
@@ -26,13 +27,12 @@ public class PostController {
         postService.add(postDto);
         return Result.success();
     }
-
-    /*@ApiOperation("分页查询帖子")
-    @GetMapping("/query")
-    public Result<PageResult> query(@RequestBody PostQueryDto postQueryDto) {
-        PageResult pageResult = postService.query(postQueryDto);
-        return Result.success(pageResult);
-    }*/
+    @ApiOperation("滚动查询帖子")
+    @GetMapping("/scroll")
+    public Result<ScrollResult> scroll(
+            @RequestParam("layoutId") Long layoutId,@RequestParam("lastId") Long max, @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return Result.success(postService.scroll(layoutId,max, offset));
+    }
 
 
 }

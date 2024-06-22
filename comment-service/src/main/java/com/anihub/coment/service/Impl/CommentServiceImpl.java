@@ -13,6 +13,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -35,5 +37,10 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                log.error("发送消息失败", e);
             }
         }
+    }
+
+    @Override
+    public Map<String, Object> getByLastId(Long postId) {
+        return commentMapper.getByLastId(postId);
     }
 }
