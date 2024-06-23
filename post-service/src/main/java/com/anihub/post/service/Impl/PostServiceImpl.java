@@ -8,12 +8,14 @@ import com.anihub.model.post.dtos.PostDto;
 import com.anihub.model.post.dtos.PostRedisDto;
 import com.anihub.model.post.pojos.Post;
 import com.anihub.model.post.pojos.PostContent;
+import com.anihub.model.post.pojos.PostLike;
 import com.anihub.model.post.pojos.PostTag;
 import com.anihub.model.user.pojos.User;
 import com.anihub.post.client.CommentClient;
 import com.anihub.post.client.LayoutClient;
 import com.anihub.post.client.UserClient;
 import com.anihub.post.mapper.PostContentMapper;
+import com.anihub.post.mapper.PostLikeMapper;
 import com.anihub.post.mapper.PostMapper;
 import com.anihub.post.mapper.PostTagMapper;
 import com.anihub.post.service.IPostService;
@@ -21,6 +23,7 @@ import com.anihub.post.utils.CacheClient;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -43,6 +46,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
     private final UserClient userClient;
     private final LayoutClient layoutClient;
     private final CommentClient commentClient;
+    private final RabbitTemplate rabbitTemplate;
+    private final PostLikeMapper postLikeMapper;
     /**
      * 添加帖子
      * @param postDto
@@ -75,6 +80,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
             try {
                 stringRedisTemplate.opsForZSet().add("post:time:" + post.getLayoutId(), post.getId().toString(), System.currentTimeMillis());
                 stringRedisTemplate.opsForValue().set("post:comment:" + post.getId(), "0");
+                stringRedisTemplate.opsForValue().set("post:like:count:" + post.getId(), "0");
                 redisSuccess = true;
                 PostRedisDto postRedisDto = new PostRedisDto();
                 BeanUtils.copyProperties(post, postRedisDto);
@@ -145,6 +151,96 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         scrollResult.setList(postRedisDtos);
         scrollResult.setMinTime(minTime);
         return scrollResult;
+    }
+    /**
+     * 点赞或者点踩帖子
+     * @param postId
+     * @param type
+     */
+
+    @Override
+    public void like(Long postId, Short type) {
+        // 1. 构建 Redis key
+        String likeKey = "post:like:" + postId;
+        String dislikeKey = "post:dislike:" + postId;
+        String postLikeCountKey = "post:like:count:" + postId;
+
+        // 2. 获取当前用户 ID
+        Long userId = UserContext.getUser();
+        String userIdStr = userId.toString();
+
+        try {
+            if (type == 1) {
+                handleLike(likeKey, dislikeKey,postLikeCountKey,userIdStr);
+            } else if (type == -1) {
+                handleDislike(likeKey, dislikeKey, postLikeCountKey,userIdStr);
+            } else if (type == 0) {
+                stringRedisTemplate.opsForSet().remove(likeKey, userIdStr);
+                stringRedisTemplate.opsForSet().remove(dislikeKey, userIdStr);
+            }else {
+                throw new IllegalArgumentException("Invalid type: " + type);
+            }
+
+            // 3. 发送消息
+            sendLikeMessage(postId, userId, type);
+        } catch (Exception e) {
+            log.error("Failed to like post", e);
+            throw new RuntimeException("Failed to like post", e);
+        }
+    }
+
+    @Override
+    public void saveLike(PostLike postLike) {
+        //查找数据库
+        QueryWrapper<PostLike> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("post_id", postLike.getPostId()).eq("user_id", postLike.getUserId());
+        PostLike pk = postLikeMapper.selectOne(queryWrapper);
+        if (pk == null) {
+            postLikeMapper.insert(postLike);
+        } else {
+            //更新
+            postLikeMapper.update(postLike, queryWrapper);
+            String s = stringRedisTemplate.opsForValue().get("post:like:count:" + postLike.getPostId());
+            if (s != null) {
+                postMapper.updateLikeCount(postLike.getPostId(), Integer.parseInt(s));
+            }
+        }
+    }
+
+    private void handleLike(String likeKey, String dislikeKey,String postLikeCountKet, String userId) {
+        if (Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(likeKey, userId))) {
+            stringRedisTemplate.opsForSet().remove(likeKey, userId);
+            stringRedisTemplate.opsForValue().decrement(postLikeCountKet);
+        } else {
+            stringRedisTemplate.opsForSet().add(likeKey, userId);
+            stringRedisTemplate.opsForValue().increment(postLikeCountKet);
+            if (Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(dislikeKey, userId))) {
+                stringRedisTemplate.opsForSet().remove(dislikeKey, userId);
+                stringRedisTemplate.opsForValue().increment(postLikeCountKet);
+            }
+        }
+    }
+
+    private void handleDislike(String likeKey, String dislikeKey,String postLikeCountKet,String userId) {
+        if (Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(dislikeKey, userId))) {
+            stringRedisTemplate.opsForSet().remove(dislikeKey, userId);
+            stringRedisTemplate.opsForValue().increment(postLikeCountKet);
+        } else {
+            stringRedisTemplate.opsForSet().add(dislikeKey, userId);
+            stringRedisTemplate.opsForValue().decrement(postLikeCountKet);
+            if (Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(likeKey, userId))) {
+                stringRedisTemplate.opsForSet().remove(likeKey, userId);
+                stringRedisTemplate.opsForValue().decrement(postLikeCountKet);
+            }
+        }
+    }
+
+    private void sendLikeMessage(Long postId, Long userId, Short type) {
+        PostLike postLike = new PostLike();
+        postLike.setPostId(postId);
+        postLike.setUserId(userId);
+        postLike.setStatus(type);
+        rabbitTemplate.convertAndSend("post.direct", "post.like", postLike);
     }
 
     private PostRedisDto findPostById(Long postId) {

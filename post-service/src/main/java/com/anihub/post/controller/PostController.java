@@ -33,6 +33,12 @@ public class PostController {
             @RequestParam("layoutId") Long layoutId,@RequestParam("lastId") Long max, @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
         return Result.success(postService.scroll(layoutId,max, offset));
     }
+    @ApiOperation("点赞或者点踩帖子")
+    @PostMapping("/like")
+    public Result like(@RequestParam("postId") Long postId, @RequestParam("type") Short type) {
+        postService.like(postId, type);
+        return Result.success();
+    }
 
 
 }

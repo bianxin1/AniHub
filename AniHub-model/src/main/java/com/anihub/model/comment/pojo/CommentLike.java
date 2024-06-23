@@ -10,5 +10,5 @@ public class CommentLike {
     @ApiModelProperty("评论id")
     private Long commentId;
     @ApiModelProperty("点赞状态:0:未点赞，1：已点赞")
-    private Integer status;
+    private Short status;
 }

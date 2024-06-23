@@ -35,4 +35,6 @@ public class Comment {
     private Date createdAt;
     @ApiModelProperty("更新时间")
     private Date updatedAt;
+    @ApiModelProperty("点赞数")
+    private Long likeCount;
 }

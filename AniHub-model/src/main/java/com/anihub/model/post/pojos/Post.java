@@ -26,11 +26,15 @@ public class Post {
     @ApiModelProperty("总回复数")
     private Long commentCount;
     @ApiModelProperty("状态")
-    private Integer status;
+    private Short status;
     @ApiModelProperty("创建时间")
     private Date createdAt;
     @ApiModelProperty("更新时间")
     private Date updatedAt;
     @ApiModelProperty("热点值")
     private Integer hotValue;
+    @ApiModelProperty("点赞数")
+    private Long likeCount;
+    @ApiModelProperty("浏览数")
+    private Long viewCount;
 }

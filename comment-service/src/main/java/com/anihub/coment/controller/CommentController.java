@@ -26,6 +26,12 @@ public class CommentController {
     public Map<String, Object> getByLastId(@RequestParam Long postId) {
         return commentService.getByLastId(postId);
     }
+    @ApiOperation("点赞或者点踩评论")
+    @PostMapping("/like")
+    public Result like(@RequestParam("commentId") Long commentId, @RequestParam("type") Short type) {
+        commentService.like(commentId, type);
+        return Result.success();
+    }
 
 
 
