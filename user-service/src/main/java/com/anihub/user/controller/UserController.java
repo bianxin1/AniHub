@@ -10,6 +10,8 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Api(tags = "用户管理")
 @RestController
 @RequestMapping("/users")
@@ -40,5 +42,10 @@ public class UserController {
     public User select(@RequestParam("id") Long id) {
         return userService.getById(id);
     }
+    @PostMapping("selectBatch")
+    List<User> selectBatch(@RequestBody List<Long> userIds){
+        return userService.selectBatchIds(userIds);
+    }
+
 
 }

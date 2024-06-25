@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.util.List;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -83,5 +85,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         BeanUtil.copyProperties(user, loginVo);
         return loginVo;
 
+    }
+
+    @Override
+
+    public List<User> selectBatchIds(List<Long> userIds) {
+        return userMapper.selectBatchIds(userIds);
     }
 }

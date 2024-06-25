@@ -2,6 +2,8 @@ package com.anihub.coment.controller;
 
 import com.anihub.coment.service.ICommentService;
 import com.anihub.model.comment.dtos.CommentDto;
+import com.anihub.model.comment.dtos.PageCommentDto;
+import com.anihub.model.common.dtos.PageResult;
 import com.anihub.model.common.dtos.Result;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -31,6 +33,11 @@ public class CommentController {
     public Result like(@RequestParam("commentId") Long commentId, @RequestParam("type") Short type) {
         commentService.like(commentId, type);
         return Result.success();
+    }
+    @ApiOperation("分页获取评论详情")
+    @GetMapping("/show")
+    public Result<PageResult> show(@RequestBody PageCommentDto pageCommentDto) {
+        return Result.success(commentService.show(pageCommentDto));
     }
 
 

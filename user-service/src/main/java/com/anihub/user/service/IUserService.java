@@ -6,6 +6,8 @@ import com.anihub.model.user.pojos.User;
 import com.anihub.model.user.vo.LoginVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 
 public interface IUserService extends IService<User> {
     /**
@@ -20,4 +22,6 @@ public interface IUserService extends IService<User> {
      * @return
      */
     LoginVo login(LoginDto loginDto);
+
+    List<User> selectBatchIds(List<Long> userIds);
 }
