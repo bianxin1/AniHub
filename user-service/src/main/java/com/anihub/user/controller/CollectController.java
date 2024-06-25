@@ -3,6 +3,7 @@ package com.anihub.user.controller;
 import cn.hutool.core.bean.BeanUtil;
 import com.anihub.common.utils.UserContext;
 import com.anihub.model.common.dtos.Result;
+import com.anihub.model.post.dtos.PostRedisDto;
 import com.anihub.model.user.dtos.FolderDto;
 import com.anihub.model.user.pojos.Folder;
 import com.anihub.model.user.vo.FolderVo;
@@ -66,5 +67,4 @@ public class CollectController {
         List<FolderVo> folderVo = BeanUtil.copyToList(folder, FolderVo.class);
         return Result.success(folderVo);
     }
-
 }
