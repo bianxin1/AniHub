@@ -5,12 +5,16 @@ import com.anihub.model.common.dtos.Result;
 import com.anihub.model.common.dtos.ScrollResult;
 import com.anihub.model.post.dtos.PostDto;
 import com.anihub.model.post.dtos.PostQueryDto;
+import com.anihub.model.post.dtos.PostRedisDto;
+import com.anihub.model.post.vo.PostVo;
 import com.anihub.post.service.IPostService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Api(tags = "帖子管理")
 @RestController
@@ -38,6 +42,13 @@ public class PostController {
     public Result like(@RequestParam("postId") Long postId, @RequestParam("type") Short type) {
         postService.like(postId, type);
         return Result.success();
+    }
+    @ApiOperation("获取帖子详情")
+    @GetMapping("/show")
+    public Result<PostVo> show(@RequestParam("postId") Long postId) {
+        postService.incViewCount(postId);
+        PostVo postVo = postService.findById(postId);
+        return Result.success(postVo);
     }
 
 

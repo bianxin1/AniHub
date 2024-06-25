@@ -4,8 +4,10 @@ import com.anihub.model.common.dtos.PageResult;
 import com.anihub.model.common.dtos.ScrollResult;
 import com.anihub.model.post.dtos.PostDto;
 import com.anihub.model.post.dtos.PostQueryDto;
+import com.anihub.model.post.dtos.PostRedisDto;
 import com.anihub.model.post.pojos.Post;
 import com.anihub.model.post.pojos.PostLike;
+import com.anihub.model.post.vo.PostVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 public interface IPostService extends IService<Post> {
@@ -35,10 +37,19 @@ public interface IPostService extends IService<Post> {
 
     void saveLike(PostLike postLike);
 
+
+    PostRedisDto findPostById(Long postId);
+
     /**
-     * 分页查询帖子
-     * @param postQueryDto
+     * 获取帖子详情
+     * @param postId
      * @return
      */
-    //PageResult query(PostQueryDto postQueryDto);
+    PostVo findById(Long postId);
+
+    /**
+     * 增加帖子浏览数
+     * @param postId
+     */
+    void incViewCount(Long postId);
 }

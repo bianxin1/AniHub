@@ -10,6 +10,7 @@ import com.anihub.model.post.pojos.Post;
 import com.anihub.model.post.pojos.PostContent;
 import com.anihub.model.post.pojos.PostLike;
 import com.anihub.model.post.pojos.PostTag;
+import com.anihub.model.post.vo.PostVo;
 import com.anihub.model.user.pojos.User;
 import com.anihub.post.client.CommentClient;
 import com.anihub.post.client.LayoutClient;
@@ -243,7 +244,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         rabbitTemplate.convertAndSend("post.direct", "post.like", postLike);
     }
 
-    private PostRedisDto findPostById(Long postId) {
+    public PostRedisDto findPostById(Long postId) {
         PostRedisDto postRedisDto = new PostRedisDto();
         Post post = postMapper.selectById(postId);
         BeanUtils.copyProperties(post, postRedisDto);
@@ -255,19 +256,57 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         List<Long> tags = postTagMapper.selectObjs(queryWrapper).stream()
                 .map(obj -> (Long) obj)
                 .collect(Collectors.toList());
-        List<Tag> tagNames = layoutClient.selectByids(tags);
-        List<String> tagNamesList = tagNames.stream().map(Tag::getName).toList();
-        postRedisDto.setTagName(tagNamesList);
-        postRedisDto.setTags(tags);
+        if (!tags.isEmpty()) {
+            List<Tag> tagNames = layoutClient.selectByids(tags);
+            List<String> tagNamesList = tagNames.stream().map(Tag::getName).toList();
+            postRedisDto.setTagName(tagNamesList);
+            postRedisDto.setTags(tags);
+        }
         Map<String, Object> byLastId = commentClient.getByLastId(postId);
         if (byLastId == null) {
             return postRedisDto;
         }
-        postRedisDto.setLastUserId((Long) byLastId.get("user_id"));
+        Integer userIdInt = (Integer) byLastId.get("user_id");
+        Long userIdLong = userIdInt != null ? userIdInt.longValue() : null; // 注意处理 null 值的情况
+        postRedisDto.setLastUserId(userIdLong);
         postRedisDto.setLastUsername(userClient.select(postRedisDto.getLastUserId()).getUsername());
         //TODO date填充
         return postRedisDto;
     }
 
+    @Override
+    public PostVo findById(Long postId) {
+        Post post = postMapper.selectById(postId);
+        PostVo postVo = new PostVo();
+        BeanUtils.copyProperties(post, postVo);
+        User userInfo = userClient.select(post.getUserId());
+        postVo.setUsername(userInfo.getUsername());
+        postVo.setGrade(userInfo.getGrade());
+        postVo.setAvatar(userInfo.getAvatar());
+        // 使用mp查询帖子内容
+        QueryWrapper<PostContent> queryWrapper1 = new QueryWrapper<>();
+        queryWrapper1.select("content").eq("post_id", postId);
+        PostContent postContent = postContentMapper.selectOne(queryWrapper1);
+        postVo.setContent(postContent.getContent());
+        // 使用mp查询标签，使用query构建查询条件
+        QueryWrapper<PostTag> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("tag_id").eq("post_id", postId);
+        List<Long> tags = postTagMapper.selectObjs(queryWrapper).stream()
+                .map(obj -> (Long) obj)
+                .collect(Collectors.toList());
+        if (!tags.isEmpty()) {
+            postVo.setTags(tags);
+            List<Tag> tagNames = layoutClient.selectByids(tags);
+            List<String> tagNamesList = tagNames.stream().map(Tag::getName).toList();
+            postVo.setTagNames(tagNamesList);
+        }
+        return postVo;
+    }
+
+    @Override
+    public void incViewCount(Long postId) {
+        String key = "post:view:" + postId;
+        stringRedisTemplate.opsForValue().increment(key);
+    }
 
 }
