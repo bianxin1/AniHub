@@ -210,10 +210,10 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         } else {
             //更新
             postLikeMapper.update(postLike, queryWrapper);
-            String s = stringRedisTemplate.opsForValue().get("post:like:count:" + postLike.getPostId());
-            if (s != null) {
-                postMapper.updateLikeCount(postLike.getPostId(), Integer.parseInt(s));
-            }
+        }
+        String s = stringRedisTemplate.opsForValue().get("post:like:count:" + postLike.getPostId());
+        if (s != null) {
+            postMapper.updateLikeCount(postLike.getPostId(), Integer.parseInt(s));
         }
     }
 
@@ -403,7 +403,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
                     updatedPosts.add(post);
                 });
 
-                saveBatch(updatedPosts);
+                updateBatchById(updatedPosts);
                 currentPage++;
             } while (currentPage <= totalPages);
         } catch (Exception e) {
