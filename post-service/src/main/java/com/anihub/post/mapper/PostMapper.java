@@ -12,5 +12,6 @@ public interface PostMapper extends BaseMapper<Post> {
     void updateLikeCount(Long postId, int i);
     @Select("select id from post")
     List<Long> selectAllPostId();
-
+    @Update("update post set view_count =#{i} where id = #{postId}")
+    void updateViewCount(Long postId, int i);
 }

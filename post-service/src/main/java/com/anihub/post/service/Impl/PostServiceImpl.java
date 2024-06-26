@@ -350,7 +350,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
 
     private void updateViewCounts(Map<Long, Long> viewCounts) {
         viewCounts.forEach((postId, viewCount) -> {
-            postMapper.updateLikeCount(postId, viewCount.intValue());
+            postMapper.updateViewCount(postId, viewCount.intValue());
         });
     }
 
