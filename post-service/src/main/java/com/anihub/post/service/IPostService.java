@@ -10,6 +10,9 @@ import com.anihub.model.post.pojos.PostLike;
 import com.anihub.model.post.vo.PostVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+import java.util.Map;
+
 public interface IPostService extends IService<Post> {
     /**
      * 添加帖子
@@ -52,4 +55,15 @@ public interface IPostService extends IService<Post> {
      * @param postId
      */
     void incViewCount(Long postId);
+
+    /**
+     * 更新帖子点赞数
+     */
+    void updatePostViewCount();
+
+    /**
+     * 更新帖子热点值
+     */
+    void updatePostHot();
+
 }

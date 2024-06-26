@@ -32,7 +32,7 @@ public class Post {
     @ApiModelProperty("更新时间")
     private Date updatedAt;
     @ApiModelProperty("热点值")
-    private Integer hotValue;
+    private Double hotValue;
     @ApiModelProperty("点赞数")
     private Long likeCount;
     @ApiModelProperty("浏览数")

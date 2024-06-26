@@ -1,7 +1,7 @@
 package com.anihub.post.service.Impl;
 
+
 import com.anihub.common.utils.UserContext;
-import com.anihub.model.common.dtos.Result;
 import com.anihub.model.common.dtos.ScrollResult;
 import com.anihub.model.layout.pojos.Tag;
 import com.anihub.model.post.dtos.PostDto;
@@ -22,8 +22,11 @@ import com.anihub.post.mapper.PostTagMapper;
 import com.anihub.post.service.IPostService;
 import com.anihub.post.utils.CacheClient;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -31,6 +34,11 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -38,7 +46,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IPostService{
+@Slf4j
+public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IPostService {
     private final PostMapper postMapper;
     private final PostContentMapper postContentMapper;
     private final PostTagMapper postTagMapper;
@@ -116,7 +125,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
      * @return
      */
     @Override
-    public ScrollResult scroll(Long layoutId,Long max, Integer offset) {
+    public ScrollResult scroll(Long layoutId, Long max, Integer offset) {
         String key = "post:time:" + layoutId;
         Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, 10);
         //非空判断
@@ -303,10 +312,117 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         return postVo;
     }
 
+    /**
+     *  增加帖子浏览数
+     * @param postId
+     */
     @Override
     public void incViewCount(Long postId) {
         String key = "post:view:" + postId;
         stringRedisTemplate.opsForValue().increment(key);
     }
 
+    /**
+     * 获取帖子浏览数
+     * @param postId
+     * @return
+     */
+
+    private Long getViewCount(Long postId) {
+        String key = "post:view:" + postId;
+        String value = stringRedisTemplate.opsForValue().get(key);
+        return value != null ? Long.parseLong(value) : 0;
+    }
+
+    /**
+     * 获取所有帖子ID
+     * @return
+     */
+
+    private List<Long> getAllPostId() {
+        return postMapper.selectAllPostId();
+    }
+
+    /**
+     * 更新帖子浏览数到mysql
+     * @param viewCounts
+     */
+
+    private void updateViewCounts(Map<Long, Long> viewCounts) {
+        viewCounts.forEach((postId, viewCount) -> {
+            postMapper.updateLikeCount(postId, viewCount.intValue());
+        });
+    }
+
+    @Override
+    public void updatePostViewCount() {
+        try {
+            List<Long> postIds = getAllPostId();
+            Map<Long, Long> viewCounts = postIds.parallelStream()
+                    .collect(Collectors.toMap(
+                            postId -> postId,
+                            this::getViewCount
+                    ));
+            updateViewCounts(viewCounts);
+        }catch (Exception e){
+            log.error("Failed to update post view count", e);
+            throw new RuntimeException("Failed to update post view count", e);
+        }
+
+    }
+
+    @Override
+    @Transactional
+    public void updatePostHot() {
+        try {
+            int pageSize = 100;
+            int currentPage = 1;
+            IPage<Post> postPage;
+
+            // 获取固定的总记录数
+            long totalRecords = postMapper.selectCount(null);
+            long totalPages = (totalRecords + pageSize - 1) / pageSize;  // 计算总页数
+
+            do {
+                log.info("Updating post hot value, current page: {}", currentPage);
+                Page<Post> page = new Page<>(currentPage, pageSize);
+                postPage = postMapper.selectPage(page, null);
+
+                // 确保分页信息正确
+                log.info("Total pages: {}, Current page: {}, Total records: {}", totalPages, postPage.getCurrent(), totalRecords);
+
+                if (postPage.getRecords().isEmpty()) {
+                    log.info("No more posts to update, exiting loop");
+                    break;
+                }
+
+                List<Post> updatedPosts = new ArrayList<>();
+                postPage.getRecords().forEach(post -> {
+                    double hotness = calculateHotness(post);
+                    post.setHotValue(hotness);
+                    updatedPosts.add(post);
+                });
+
+                saveBatch(updatedPosts);
+                currentPage++;
+            } while (currentPage <= totalPages);
+        } catch (Exception e) {
+            log.error("Failed to update post hot value", e);
+            throw new RuntimeException("Failed to update post hot value", e);
+        }
+    }
+
+    private double calculateHotness(Post post) {
+        long viewCount = post.getViewCount();
+        long likeCount = post.getLikeCount();
+        long commentCount = post.getCommentCount();
+
+        // Convert Date to LocalDateTime
+        LocalDateTime createdAt = Instant.ofEpochMilli(post.getCreatedAt().getTime())
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+        long timeDifference = ChronoUnit.MINUTES.between(createdAt, LocalDateTime.now());
+
+        return (double) (likeCount * 2 + commentCount * 4 + viewCount) / timeDifference;
+    }
 }
