@@ -58,8 +58,10 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
     private final CommentClient commentClient;
     private final RabbitTemplate rabbitTemplate;
     private final PostLikeMapper postLikeMapper;
+
     /**
      * 添加帖子
+     *
      * @param postDto
      */
     @Override
@@ -120,6 +122,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
 
     /**
      * 滚动查询帖子
+     *
      * @param max
      * @param offset
      * @return
@@ -129,7 +132,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         String key = "post:time:" + layoutId;
         Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, 10);
         //非空判断
-        if (typedTuples==null||typedTuples.isEmpty()) {
+        if (typedTuples == null || typedTuples.isEmpty()) {
             return new ScrollResult();
         }
         List<Long> ids = new ArrayList<>(typedTuples.size());
@@ -140,9 +143,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
             ids.add(Long.valueOf(tuple.getValue()));
             // 4.2.获取分数(时间戳）
             long time = tuple.getScore().longValue();
-            if(time == minTime){
+            if (time == minTime) {
                 os++;
-            }else{
+            } else {
                 minTime = time;
                 os = 1;
             }
@@ -152,7 +155,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         List<PostRedisDto> postRedisDtos = new ArrayList<>();
         Function<Long, PostRedisDto> dbFallback = this::findPostById;
         for (Long id : ids) {
-            PostRedisDto postRedisDto = cacheClient.queryWithMutex("post:info:",id, PostRedisDto.class,dbFallback,1L, TimeUnit.DAYS);
+            PostRedisDto postRedisDto = cacheClient.queryWithMutex("post:info:", id, PostRedisDto.class, dbFallback, 1L, TimeUnit.DAYS);
             postRedisDtos.add(postRedisDto);
         }
         // 6.返回结果
@@ -162,8 +165,10 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         scrollResult.setMinTime(minTime);
         return scrollResult;
     }
+
     /**
      * 点赞或者点踩帖子
+     *
      * @param postId
      * @param type
      */
@@ -181,13 +186,13 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
 
         try {
             if (type == 1) {
-                handleLike(likeKey, dislikeKey,postLikeCountKey,userIdStr);
+                handleLike(likeKey, dislikeKey, postLikeCountKey, userIdStr);
             } else if (type == -1) {
-                handleDislike(likeKey, dislikeKey, postLikeCountKey,userIdStr);
+                handleDislike(likeKey, dislikeKey, postLikeCountKey, userIdStr);
             } else if (type == 0) {
                 stringRedisTemplate.opsForSet().remove(likeKey, userIdStr);
                 stringRedisTemplate.opsForSet().remove(dislikeKey, userIdStr);
-            }else {
+            } else {
                 throw new IllegalArgumentException("Invalid type: " + type);
             }
 
@@ -217,7 +222,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         }
     }
 
-    private void handleLike(String likeKey, String dislikeKey,String postLikeCountKet, String userId) {
+    private void handleLike(String likeKey, String dislikeKey, String postLikeCountKet, String userId) {
         if (Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(likeKey, userId))) {
             stringRedisTemplate.opsForSet().remove(likeKey, userId);
             stringRedisTemplate.opsForValue().decrement(postLikeCountKet);
@@ -231,7 +236,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         }
     }
 
-    private void handleDislike(String likeKey, String dislikeKey,String postLikeCountKet,String userId) {
+    private void handleDislike(String likeKey, String dislikeKey, String postLikeCountKet, String userId) {
         if (Boolean.TRUE.equals(stringRedisTemplate.opsForSet().isMember(dislikeKey, userId))) {
             stringRedisTemplate.opsForSet().remove(dislikeKey, userId);
             stringRedisTemplate.opsForValue().increment(postLikeCountKet);
@@ -262,9 +267,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         // 使用mp查询标签，使用query构建查询条件
         QueryWrapper<PostTag> queryWrapper = new QueryWrapper<>();
         queryWrapper.select("tag_id").eq("post_id", postId);
-        List<Long> tags = postTagMapper.selectObjs(queryWrapper).stream()
-                .map(obj -> (Long) obj)
-                .collect(Collectors.toList());
+        List<Long> tags = postTagMapper.selectObjs(queryWrapper).stream().map(obj -> (Long) obj).collect(Collectors.toList());
         if (!tags.isEmpty()) {
             List<Tag> tagNames = layoutClient.selectByids(tags);
             List<String> tagNamesList = tagNames.stream().map(Tag::getName).toList();
@@ -300,9 +303,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         // 使用mp查询标签，使用query构建查询条件
         QueryWrapper<PostTag> queryWrapper = new QueryWrapper<>();
         queryWrapper.select("tag_id").eq("post_id", postId);
-        List<Long> tags = postTagMapper.selectObjs(queryWrapper).stream()
-                .map(obj -> (Long) obj)
-                .collect(Collectors.toList());
+        List<Long> tags = postTagMapper.selectObjs(queryWrapper).stream().map(obj -> (Long) obj).collect(Collectors.toList());
         if (!tags.isEmpty()) {
             postVo.setTags(tags);
             List<Tag> tagNames = layoutClient.selectByids(tags);
@@ -313,7 +314,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
     }
 
     /**
-     *  增加帖子浏览数
+     * 增加帖子浏览数
+     *
      * @param postId
      */
     @Override
@@ -324,6 +326,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
 
     /**
      * 获取帖子浏览数
+     *
      * @param postId
      * @return
      */
@@ -336,6 +339,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
 
     /**
      * 获取所有帖子ID
+     *
      * @return
      */
 
@@ -345,6 +349,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
 
     /**
      * 更新帖子浏览数到mysql
+     *
      * @param viewCounts
      */
 
@@ -358,13 +363,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
     public void updatePostViewCount() {
         try {
             List<Long> postIds = getAllPostId();
-            Map<Long, Long> viewCounts = postIds.parallelStream()
-                    .collect(Collectors.toMap(
-                            postId -> postId,
-                            this::getViewCount
-                    ));
+            Map<Long, Long> viewCounts = postIds.parallelStream().collect(Collectors.toMap(postId -> postId, this::getViewCount));
             updateViewCounts(viewCounts);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("Failed to update post view count", e);
             throw new RuntimeException("Failed to update post view count", e);
         }
@@ -412,15 +413,32 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         }
     }
 
+    /**
+     * 更新热门帖子到 Redis
+     */
+    @Override
+    public void updateHotPostToRedis(Long layoutId) {
+        List<Long> childrenIds = layoutClient.getLayoutIdByParentId(layoutId);
+        childrenIds.add(layoutId);
+        List<Post> hotPosts = postMapper.selectList(new QueryWrapper<Post>().in("layout_id", childrenIds).orderByDesc("hot_value").last("limit 10"));
+        String key = "layout:hot:" + layoutId;
+        stringRedisTemplate.delete(key);
+        // 使用批量操作
+        Set<ZSetOperations.TypedTuple<String>> tuples = new HashSet<>();
+        for (Post post : hotPosts) {
+            tuples.add(ZSetOperations.TypedTuple.of(post.getId().toString(), post.getHotValue()));
+        }
+        stringRedisTemplate.opsForZSet().add(key, tuples);
+        stringRedisTemplate.expire(key, 1, TimeUnit.DAYS);
+    }
+
     private double calculateHotness(Post post) {
         long viewCount = post.getViewCount();
         long likeCount = post.getLikeCount();
         long commentCount = post.getCommentCount();
 
         // Convert Date to LocalDateTime
-        LocalDateTime createdAt = Instant.ofEpochMilli(post.getCreatedAt().getTime())
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime();
+        LocalDateTime createdAt = Instant.ofEpochMilli(post.getCreatedAt().getTime()).atZone(ZoneId.systemDefault()).toLocalDateTime();
         long timeDifference = ChronoUnit.MINUTES.between(createdAt, LocalDateTime.now());
 
         return (double) (likeCount * 2 + commentCount * 4 + viewCount) / timeDifference;

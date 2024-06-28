@@ -66,4 +66,8 @@ public interface IPostService extends IService<Post> {
      */
     void updatePostHot();
 
+    /**
+     * 更新读取热点帖子到redis
+     */
+    void updateHotPostToRedis(Long parentId);
 }
