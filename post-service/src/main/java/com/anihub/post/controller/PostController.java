@@ -31,18 +31,21 @@ public class PostController {
         postService.add(postDto);
         return Result.success();
     }
+
     @ApiOperation("滚动查询帖子")
     @GetMapping("/scroll")
     public Result<ScrollResult> scroll(
-            @RequestParam("layoutId") Long layoutId,@RequestParam("lastId") Long max, @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
-        return Result.success(postService.scroll(layoutId,max, offset));
+            @RequestParam("layoutId") Long layoutId, @RequestParam("lastId") Long max, @RequestParam(value = "offset", defaultValue = "0") Integer offset) {
+        return Result.success(postService.scroll(layoutId, max, offset));
     }
+
     @ApiOperation("点赞或者点踩帖子")
     @PostMapping("/like")
     public Result like(@RequestParam("postId") Long postId, @RequestParam("type") Short type) {
         postService.like(postId, type);
         return Result.success();
     }
+
     @ApiOperation("获取帖子详情")
     @GetMapping("/show")
     public Result<PostVo> show(@RequestParam("postId") Long postId) {
@@ -51,5 +54,9 @@ public class PostController {
         return Result.success(postVo);
     }
 
-
+    @ApiOperation("获取热点帖子列表")
+    @GetMapping("/hot/{layoutId}")
+    public Result<List<PostRedisDto>> hot(@PathVariable("layoutId") Long layoutId) {
+        return Result.success(postService.hot(layoutId));
+    }
 }

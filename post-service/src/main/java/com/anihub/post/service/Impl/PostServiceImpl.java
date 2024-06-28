@@ -40,6 +40,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -430,6 +431,36 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements IP
         }
         stringRedisTemplate.opsForZSet().add(key, tuples);
         stringRedisTemplate.expire(key, 1, TimeUnit.DAYS);
+    }
+
+    /**
+     * 获取热点帖子列表
+     * @return
+     */
+    @Override
+    public List<PostRedisDto> hot(Long layoutId) {
+        String key = "layout:hot:" + layoutId;
+        Set<ZSetOperations.TypedTuple<String>> tuples = stringRedisTemplate.opsForZSet().reverseRangeWithScores(key, 0, 9);
+        if (tuples == null || tuples.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> postIds = tuples.stream()
+                .map(t -> Long.parseLong(Objects.requireNonNull(t.getValue())))
+                .toList();
+
+        List<CompletableFuture<PostRedisDto>> futures = postIds.stream()
+                .map(postId -> CompletableFuture.supplyAsync(() ->
+                        cacheClient.queryWithMutex("post:info:", postId, PostRedisDto.class,
+                                this::findPostById, 1L, TimeUnit.DAYS)))
+                .toList();
+
+        List<PostRedisDto> postRedisDtos = futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
+
+        return postRedisDtos;
+
     }
 
     private double calculateHotness(Post post) {
